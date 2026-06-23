@@ -26,15 +26,3 @@ jobs:
       - name: Push image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/e0bmanager-api:latest
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: khaingiy
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /home/khaingiy/E0bManagerTwo12/server-api/server-api
-            git pull origin main
-            docker compose down
-            docker compose up -d --build
