@@ -1,0 +1,79 @@
+services:
+
+  # ── MySQL Database ────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: e0bmanager_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: e0bmanager_db
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"        # expose ra ngoài để DBeaver/MySQL Workbench kết nối được
+    volumes:
+      - mysql_data:/var/lib/mysql          # dữ liệu bền vững, không mất khi restart
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # chạy SQL khởi tạo lần đầu
+    networks:
+      - e0bmanager_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Spring Boot API ───────────────────────────────────────────────────────
+  server-api:
+    build:
+      context: .            # thư mục chứa Dockerfile
+      dockerfile: Dockerfile
+    container_name: e0bmanager_api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Ghi đè application.properties — "mysql" là tên service bên trên
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/e0bmanager_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"        # tắt log SQL ở production
+      # Cấu hình mail (giữ nguyên như application.properties)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: nhatnguyen10082005@gmail.com
+      SPRING_MAIL_PASSWORD: jxnnbzcfanfdhdve
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy   # chờ MySQL sẵn sàng rồi mới khởi động API
+    networks:
+      - e0bmanager_net
+
+  # ── phpMyAdmin (tiện quản lý DB bằng web, có thể xóa ở production) ───────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: e0bmanager_pma
+    restart: unless-stopped
+    ports:
+      - "8081:80"          # truy cập: http://localhost:8081
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: 1234
+    depends_on:
+      - mysql
+    networks:
+      - e0bmanager_net
+
+# ── Volumes & Networks ────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  e0bmanager_net:
+    driver: bridge

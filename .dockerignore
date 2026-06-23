@@ -1,0 +1,23 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build output (Stage 1 trong Dockerfile sẽ tự build lại)
+target/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docs
+*.md
+HELP.md
